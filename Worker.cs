@@ -1,10 +1,40 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Text;
 
 namespace DnsUpdater;
 
 public class Worker : BackgroundService
 {
+	private static FileStream GetLastIpFile()
+	{
+		var parent = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+		var dir = Path.Combine(parent, AppDomain.CurrentDomain.FriendlyName);
+		var file = Path.Combine(dir, "last_ip");
+
+		Directory.CreateDirectory(dir);
+		return File.Open(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+	}
+
+	private static bool TryGetLastIp(Stream stream, [MaybeNullWhen(false)] out IPAddress ip)
+	{
+		string text;
+
+		using (var reader = new StreamReader(stream, leaveOpen: true))
+			text = reader.ReadToEnd();
+
+		return IPAddress.TryParse(text, out ip);
+	}
+
+	private static void WriteIp(Stream stream, IPAddress ip)
+	{
+		var bytes = Encoding.ASCII.GetBytes(ip.ToString());
+		stream.SetLength(0);
+		stream.Write(bytes);
+		stream.Flush();
+	}
+
 	private static async Task<IPAddress> GetIpAddressAsync(HttpClient client, Uri provider, CancellationToken cancellationToken = default)
 	{
 		using var res = await client.GetAsync(provider, cancellationToken);
@@ -52,11 +82,9 @@ public class Worker : BackgroundService
 	{
 		using var ss = new SemaphoreSlim(0, 1);
 		using var client = _httpClientFactory.CreateClient();
+		using var handle = GetLastIpFile();
 
 		var lastChangeToken = new CancellationTokenSource();
-		var lastIp = await CheckAsync(null);
-
-		NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
 
 		async Task<IPAddress?> CheckAsync(IPAddress? lastIp)
 		{
@@ -64,6 +92,7 @@ public class Worker : BackgroundService
 			if (ip != null && !ip.Equals(lastIp))
 			{
 				await OnChangeAsync(client, ip, stoppingToken);
+				WriteIp(handle, ip);
 				return ip;
 			}
 
@@ -99,10 +128,16 @@ public class Worker : BackgroundService
 
 		try
 		{
+			TryGetLastIp(handle, out var lastIp);
+
+			_logger.LogInformation("IP address from last_ip file: {ip}", lastIp);
+
+			NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
+
 			while (!stoppingToken.IsCancellationRequested)
 			{
-				await ss.WaitAsync(stoppingToken);
 				lastIp = await CheckAsync(lastIp);
+				await ss.WaitAsync(stoppingToken);
 			}
 		}
 		catch (OperationCanceledException ex)
