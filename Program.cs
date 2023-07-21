@@ -31,7 +31,6 @@ var host = new HostBuilder()
 		if (OperatingSystem.IsWindows())
 		{
 			var options = config.GetSection("EventLog").Get<EventLogSettings>();
-			logging.AddFilter<EventLogLoggerProvider>(level => level >= LogLevel.Warning);
 			logging.AddEventLog(options ?? new());
 		}
 	})
