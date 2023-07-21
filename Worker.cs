@@ -7,6 +7,9 @@ namespace DnsUpdater;
 
 public class Worker : BackgroundService
 {
+	private const int ipv4Bytes = 4;
+	private const int ipv6Bytes = 16;
+
 	private static FileStream GetLastIpFile()
 	{
 		var parent = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -19,19 +22,29 @@ public class Worker : BackgroundService
 
 	private static bool TryGetLastIp(Stream stream, [MaybeNullWhen(false)] out IPAddress ip)
 	{
-		string text;
+		if (stream.Length != ipv4Bytes && stream.Length != ipv6Bytes)
+		{
+			ip = null;
+			return false;
+		}
 
-		using (var reader = new StreamReader(stream, leaveOpen: true))
-			text = reader.ReadToEnd();
-
-		return IPAddress.TryParse(text, out ip);
+		Span<byte> data = stackalloc byte[(int)stream.Length];
+		stream.ReadExactly(data);
+		ip = new(data);
+		return true;
 	}
 
 	private static void WriteIp(Stream stream, IPAddress ip)
 	{
-		var bytes = Encoding.ASCII.GetBytes(ip.ToString());
+		var bytes = ip.GetAddressBytes();
 		stream.SetLength(0);
 		stream.Write(bytes);
+		stream.Flush();
+	}
+
+	private static void AppendIp(TextWriter stream, IPAddress ip)
+	{
+		stream.WriteLine("[{0:O}] {1}", DateTime.UtcNow, ip);
 		stream.Flush();
 	}
 
@@ -72,6 +85,26 @@ public class Worker : BackgroundService
 		_httpClientFactory = httpClientFactory;
 	}
 
+	private TextWriter? GetHistoryFile()
+	{
+		if (string.IsNullOrEmpty(_config.HistoryFile))
+			return null;
+
+		var path = Environment.ExpandEnvironmentVariables(_config.HistoryFile)!;
+		try
+		{
+			var dir = Path.GetDirectoryName(path)!;
+			Directory.CreateDirectory(dir);
+			var stream = File.Open(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+			return new StreamWriter(stream, Encoding.UTF8);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to open history file for writing. Resolved path: {path}", path);
+			return null;
+		}
+	}
+
 	private Task OnChangeAsync(HttpClient client, IPAddress address, CancellationToken stoppingToken)
 	{
 		_logger.LogInformation("Updating IP address to {address}", address);
@@ -82,7 +115,8 @@ public class Worker : BackgroundService
 	{
 		using var ss = new SemaphoreSlim(0, 1);
 		using var client = _httpClientFactory.CreateClient();
-		using var handle = GetLastIpFile();
+		using var ipFile = GetLastIpFile();
+		using var historyFile = GetHistoryFile();
 
 		var lastChangeToken = new CancellationTokenSource();
 
@@ -92,7 +126,12 @@ public class Worker : BackgroundService
 			if (ip != null && !ip.Equals(lastIp))
 			{
 				await OnChangeAsync(client, ip, stoppingToken);
-				WriteIp(handle, ip);
+
+				WriteIp(ipFile, ip);
+
+				if (historyFile != null)
+					AppendIp(historyFile, ip);
+
 				return ip;
 			}
 
@@ -128,7 +167,7 @@ public class Worker : BackgroundService
 
 		try
 		{
-			TryGetLastIp(handle, out var lastIp);
+			TryGetLastIp(ipFile, out var lastIp);
 
 			_logger.LogInformation("IP address from last_ip file: {ip}", lastIp);
 

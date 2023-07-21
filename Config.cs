@@ -16,10 +16,14 @@ public sealed class Config
 	}
 
 	[JsonProperty(Required = Required.Always)]
-	public required Uri IpProvider { get; set; }
-
-	public int ChangeDelay { get; set; } = 1000;
+	public required Uri IpProvider { get; init; }
 
 	[JsonProperty]
-	public List<string> Ignore { get; private set; } = new();
+	public int ChangeDelay { get; init; } = 1000;
+
+	[JsonProperty]
+	public List<string> Ignore { get; init; } = new();
+
+	[JsonProperty]
+	public string? HistoryFile { get; init; }
 }
