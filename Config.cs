@@ -22,7 +22,10 @@ public sealed class Config
 	public int ChangeDelay { get; init; } = 1000;
 
 	[JsonProperty]
-	public List<string> Ignore { get; init; } = new();
+	public List<string> Ignore { get; } = new();
+
+	[JsonProperty]
+	public List<Action> Actions { get; } = new();
 
 	[JsonProperty]
 	public string? HistoryFile { get; init; }

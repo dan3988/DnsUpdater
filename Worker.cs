@@ -75,13 +75,17 @@ public class Worker : BackgroundService
 	}
 
 	private readonly ILogger<Worker> _logger;
+	private readonly IConfiguration _configuration;
 	private readonly Config _config;
 	private readonly IHttpClientFactory _httpClientFactory;
+	private readonly CompiledAction[] _actions;
 
 	public Worker(ILogger<Worker> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
 	{
-		_config = configuration.GetRequiredSection("Config").Get<Config>()!;
 		_logger = logger;
+		_configuration = configuration;
+		_config = configuration.GetRequiredSection("Config").Get<Config>()!;
+		_actions = _config.Actions.Select(v => v.Compile()).ToArray();
 		_httpClientFactory = httpClientFactory;
 	}
 
@@ -105,10 +109,27 @@ public class Worker : BackgroundService
 		}
 	}
 
-	private Task OnChangeAsync(HttpClient client, IPAddress address, CancellationToken stoppingToken)
+	private async Task OnChangeAsync(HttpClient client, IPAddress address, CancellationToken stoppingToken)
 	{
 		_logger.LogInformation("Updating IP address to {address}", address);
-		return Task.CompletedTask;
+
+		var values = new Dictionary<string, object>
+		{
+			["IP"] = address,
+			["Date"] = DateTime.Now
+		};
+
+		var resolver = new WorkerResolver(_configuration, values);
+
+		foreach (var action in _actions)
+		{
+			using var message = action.CreateRequest(resolver);
+			using var response = await client.SendAsync(message, stoppingToken);
+
+			var body = response.Content == null ? null : await response.Content.ReadAsStringAsync(stoppingToken);
+			var level = response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Warning;
+			_logger.Log(level, "Response from {location}: {code} {text}\n{body}", message.RequestUri, (int)response.StatusCode, response.ReasonPhrase, body);
+		}
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
