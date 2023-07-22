@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace DnsUpdater;
 
 [StructLayout(LayoutKind.Sequential, Size = sizeof(int))]
-public readonly unsafe struct IPv4Address : IEquatable<IPv4Address>, IEqualityOperators<IPv4Address>, IParsable<IPv4Address>, ISpanParsable<IPv4Address>
+public readonly unsafe struct IPv4Address : IEquatable<IPv4Address>, IEqualityOperators<IPv4Address, IPv4Address, bool>, IParsable<IPv4Address>, ISpanParsable<IPv4Address>
 {
 	public static IPv4Address Parse(string s)
 		=> Parse(s.AsSpan(), null);
