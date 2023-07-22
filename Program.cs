@@ -17,6 +17,7 @@ var host = new HostBuilder()
 
 		logging.AddConfiguration(config);
 		logging.AddSimpleConsole();
+		logging.AddDebug();
 
 		var serilog = config.GetSection("Serilog");
 		if (serilog != null && serilog.Exists())
