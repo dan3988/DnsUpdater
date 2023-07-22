@@ -3,9 +3,9 @@
 public sealed class WorkerResolver : ITemplateResolver
 {
 	private readonly IConfiguration _configuration;
-	private readonly IReadOnlyDictionary<string, object> _values;
+	private readonly IReadOnlyDictionary<string, object?> _values;
 
-	public WorkerResolver(IConfiguration configuration, IReadOnlyDictionary<string, object> values)
+	public WorkerResolver(IConfiguration configuration, IReadOnlyDictionary<string, object?> values)
 	{
 		_configuration = configuration;
 		_values = values;

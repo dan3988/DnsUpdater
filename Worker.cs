@@ -109,13 +109,14 @@ public class Worker : BackgroundService
 		}
 	}
 
-	private async Task OnChangeAsync(HttpClient client, IPAddress address, CancellationToken stoppingToken)
+	private async Task OnChangeAsync(HttpClient client, IPAddress address, IPAddress? oldAddress, CancellationToken stoppingToken)
 	{
 		_logger.LogInformation("Updating IP address to {address}", address);
 
-		var values = new Dictionary<string, object>
+		var values = new Dictionary<string, object?>
 		{
 			["IP"] = address,
+			["OLDIP"] = oldAddress,
 			["Date"] = DateTime.Now
 		};
 
@@ -146,7 +147,7 @@ public class Worker : BackgroundService
 			var ip = await CheckAddressAsync(client, stoppingToken);
 			if (ip != null && !ip.Equals(lastIp))
 			{
-				await OnChangeAsync(client, ip, stoppingToken);
+				await OnChangeAsync(client, ip, lastIp, stoppingToken);
 
 				WriteIp(ipFile, ip);
 
