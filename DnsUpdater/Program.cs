@@ -22,7 +22,9 @@ var host = new HostBuilder()
 		var baseDir = ctx.Configuration.GetValue<string>("BaseDir");
 		if (!string.IsNullOrEmpty(baseDir))
 		{
-			Environment.CurrentDirectory = Environment.ExpandEnvironmentVariables(baseDir);
+			baseDir = Environment.ExpandEnvironmentVariables(baseDir);
+			Environment.SetEnvironmentVariable("BASEDIR", baseDir);
+			Environment.CurrentDirectory = baseDir;
 			var config = Path.GetFullPath("appsettings.json");
 			b.AddJsonFile(config, false);
 		}
