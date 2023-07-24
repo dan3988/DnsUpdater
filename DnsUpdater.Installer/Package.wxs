@@ -16,9 +16,11 @@
 		</DirectoryRef>
 
 		<DirectoryRef Id="INSTALLFOLDER">
-			<Component Id="ServiceExecutable" Bitness="always64">
-				<!--<File Id="DnsUpdater.exe" Source="$(var.PublishDir)\DnsUpdater.exe" KeyPath="true" />-->
+			<Component Id="AppConfig">
 				<File Id="appsettings.json" Source="..\DnsUpdater\appsettings.json" />
+			</Component>
+			<Component Id="ServiceExecutable" Bitness="always64" Guid="7DC2BDFD-4A8B-4508-9C07-A9EDB79218F8">
+				<File KeyPath="yes" Source="$(var.PublishDir)\DnsUpdater.exe" />
 
 				<RemoveFile Name="*.*" On="both"/>
 
@@ -43,7 +45,8 @@
 		<Feature Id="Service" Title="DnsUpdater Setup" Level="1">
 			<ComponentGroupRef Id="Bin"/>
 			<ComponentRef Id="ServiceExecutable" />
-			<ComponentRef Id="DefaultConfig"/>
+			<ComponentRef Id="AppConfig" />
+			<ComponentRef Id="UserConfig"/>
 		</Feature>
 	</Package>
 </Wix>
