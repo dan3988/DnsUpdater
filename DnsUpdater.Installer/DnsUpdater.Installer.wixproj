@@ -5,7 +5,6 @@
     <SuppressValidation>true</SuppressValidation>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DnsUpdater\DnsUpdater.csproj" />
     <PackageReference Include="WixToolset.Heat" Version="4.0.1" />
     <HarvestDirectory Include="$(PublishDir)">
       <SuppressRegistry>true</SuppressRegistry>
