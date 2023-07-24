@@ -117,7 +117,7 @@ public class Worker : BackgroundService
 		{
 			["IP"] = address,
 			["OLDIP"] = oldAddress,
-			["Date"] = DateTime.Now
+			["DATE"] = DateTime.Now
 		};
 
 		var resolver = new WorkerResolver(_configuration, values);
