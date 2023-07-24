@@ -12,12 +12,7 @@ public class Worker : BackgroundService
 
 	private static FileStream GetLastIpFile()
 	{
-		var parent = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-		var dir = Path.Combine(parent, AppDomain.CurrentDomain.FriendlyName);
-		var file = Path.Combine(dir, "last_ip");
-
-		Directory.CreateDirectory(dir);
-		return File.Open(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+		return File.Open("last_ip", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 	}
 
 	private static bool TryGetLastIp(Stream stream, [MaybeNullWhen(false)] out IPAddress ip)

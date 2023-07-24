@@ -4,7 +4,11 @@ using Microsoft.Extensions.Logging.EventLog;
 
 //IHost host = Host.CreateDefaultBuilder(args)
 var host = new HostBuilder()
-	.ConfigureHostConfiguration(c => c.AddEnvironmentVariables(prefix: "DOTNET_"))
+	.ConfigureHostConfiguration(b =>
+	{
+		b.AddEnvironmentVariables();
+		b.AddJsonFile("appsettings.json");
+	})
 	.ConfigureAppConfiguration((ctx, b) =>
 	{
 		b.AddEnvironmentVariables();
@@ -14,11 +18,13 @@ var host = new HostBuilder()
 		{
 			b.AddJsonFile($"appsettings.Development.json");
 		}
-		else
+
+		var baseDir = ctx.Configuration.GetValue<string>("BaseDir");
+		if (!string.IsNullOrEmpty(baseDir))
 		{
-			var dir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-			var path = Path.Join(dir, ctx.HostingEnvironment.ApplicationName, "appsettings.json");
-			b.AddJsonFile(path);
+			Environment.CurrentDirectory = Environment.ExpandEnvironmentVariables(baseDir);
+			var config = Path.GetFullPath("appsettings.json");
+			b.AddJsonFile(config, false);
 		}
 	})
 	.ConfigureLogging((ctx, logging) =>
