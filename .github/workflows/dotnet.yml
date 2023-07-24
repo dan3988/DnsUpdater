@@ -22,5 +22,7 @@ jobs:
         dotnet-version: 7.0.x
     - name: Restore dependencies
       run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
+    - name: Build Service
+      run: dotnet publish DnsUpdater -c Release -p:PublishProfile=Publish
+    - name: Build Installer
+      run: dotnet build DnsUpdater.Installer -c Release
