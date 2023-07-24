@@ -1,6 +1,10 @@
+using System.Diagnostics;
+
 using DnsUpdater;
 
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging.EventLog;
+using Microsoft.Extensions.Options;
 
 //IHost host = Host.CreateDefaultBuilder(args)
 var host = new HostBuilder()
@@ -12,7 +16,6 @@ var host = new HostBuilder()
 	.ConfigureAppConfiguration((ctx, b) =>
 	{
 		b.AddEnvironmentVariables();
-		b.AddJsonFile("appsettings.json");
 
 		if (ctx.HostingEnvironment.IsDevelopment())
 		{
@@ -46,18 +49,41 @@ var host = new HostBuilder()
 		{
 			logging.AddFile("Logs\\{Date}.log");
 		}
-
+	})
+	.ConfigureServices((ctx, services) =>
+	{
 		if (OperatingSystem.IsWindows())
 		{
-			var options = config.GetSection("EventLog").Get<EventLogSettings>();
-			logging.AddEventLog(options ?? new());
+			services.Configure((EventLogSettings settings) =>
+			{
+				Debug.Assert(OperatingSystem.IsWindows());
+
+				settings.SourceName = ctx.HostingEnvironment.ApplicationName;
+
+				var options = ctx.Configuration.GetSection("Logging:EventLog");
+				if (options.Exists())
+					options.Bind(settings);
+			});
+
+			services.AddLogging(v =>
+			{
+				Debug.Assert(OperatingSystem.IsWindows());
+				v.AddEventLog();
+			});
+
+			if (!Environment.UserInteractive)
+			{
+				services.AddSingleton<IHostLifetime, WindowsServiceLifetime>();
+				services.Configure<WindowsServiceLifetimeOptions>(v =>
+				{
+					v.ServiceName = ctx.HostingEnvironment.ApplicationName;
+				});
+			}
 		}
-	})
-	.ConfigureServices(services =>
-	{
+
 		services.AddHttpClient();
 		services.AddHostedService<Worker>();
 	})
 	.Build();
 
-host.Run();
+await host.RunAsync();
