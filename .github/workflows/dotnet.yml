@@ -25,4 +25,9 @@ jobs:
     - name: Build Service
       run: dotnet publish DnsUpdater -c Release -p:PublishProfile=Publish
     - name: Build Installer
-      run: dotnet build DnsUpdater.Installer -c Release
+      run: dotnet build DnsUpdater.Installer -c Release -o dist
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        path: dist
+        retention-days: 1
