@@ -10,9 +10,7 @@
 		</StandardDirectory>
 
 		<DirectoryRef Id="ConfigDir">
-			<!--<Directory Id="ConfigDirectory" Name="$(Name)"/>-->
-			<Component Id="DefaultConfig" Guid="7F70E464-8851-4CBD-8683-A350E350F586">
-				<RegistryValue Root="HKCU" Key="Software\$(var.Manufacturer)\$(var.Name)" Name="DefaultConfig" Value="something"/>
+			<Component Id="UserConfig" Guid="7F70E464-8851-4CBD-8683-A350E350F586" Permanent="yes">
 				<File Id="appsettings.Default.json" Name="appsettings.json" Source="..\DnsUpdater\appsettings.Default.json" />
 			</Component>
 		</DirectoryRef>
