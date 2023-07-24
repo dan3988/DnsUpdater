@@ -1,0 +1,42 @@
+﻿<?define Name = "DnsUpdater" ?>
+<?define Manufacturer = "dan3988" ?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+	<Package Name="$(Name)" Manufacturer="$(Manufacturer)" Version="1.0.0.0" UpgradeCode="19e67424-4140-4f67-bc30-a85f6fe1ead0">
+		<MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeError)" />
+
+		<StandardDirectory Id="TARGETDIR">
+			<Directory Id="ROOTDIRECTORY" Name="$(Name)"/>
+		</StandardDirectory>
+
+		<DirectoryRef Id="INSTALLFOLDER">
+			<Component Id="ServiceExecutable" Bitness="always64">
+				<!--<File Id="DnsUpdater.exe" Source="$(var.PublishDir)\DnsUpdater.exe" KeyPath="true" />-->
+				<File Id="appsettings.json" Source="..\DnsUpdater\appsettings.json" />
+
+				<RemoveFile Name="*.*" On="both"/>
+
+				<ServiceInstall
+					Id="ServiceInstaller"
+					Type="ownProcess"
+					Name="DnsUpdater"
+					DisplayName="$(Name)"
+					Description="Dynamic DNS updater"
+					Start="auto"
+					ErrorControl="normal"/>
+
+				<ServiceControl
+					Id="StartService"
+					Stop="both"
+					Remove="uninstall"
+					Name="DnsUpdater"
+					Wait="true"/>
+			</Component>
+		</DirectoryRef>
+
+		<Feature Id="Service" Title="DnsUpdater Setup" Level="1">
+			<ComponentGroupRef Id="Bin"/>
+			<ComponentRef Id="ServiceExecutable" />
+		</Feature>
+	</Package>
+</Wix>

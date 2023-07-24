@@ -7,9 +7,11 @@ var host = new HostBuilder()
 	.ConfigureHostConfiguration(c => c.AddEnvironmentVariables(prefix: "DOTNET_"))
 	.ConfigureAppConfiguration((ctx, b) =>
 	{
-		b.AddJsonFile("appsettings.json");
-		b.AddJsonFile($"appsettings.{ctx.HostingEnvironment.EnvironmentName}.json");
 		b.AddEnvironmentVariables();
+		b.AddJsonFile("appsettings.json");
+
+		if (ctx.HostingEnvironment.IsDevelopment())
+			b.AddJsonFile($"appsettings.Development.json");
 	})
 	.ConfigureLogging((ctx, logging) =>
 	{
