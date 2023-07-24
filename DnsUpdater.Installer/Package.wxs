@@ -9,6 +9,14 @@
 			<Directory Id="ROOTDIRECTORY" Name="$(Name)"/>
 		</StandardDirectory>
 
+		<DirectoryRef Id="ConfigDir">
+			<!--<Directory Id="ConfigDirectory" Name="$(Name)"/>-->
+			<Component Id="DefaultConfig" Guid="7F70E464-8851-4CBD-8683-A350E350F586">
+				<RegistryValue Root="HKCU" Key="Software\$(var.Manufacturer)\$(var.Name)" Name="DefaultConfig" Value="something"/>
+				<File Id="appsettings.Default.json" Name="appsettings.json" Source="..\DnsUpdater\appsettings.Default.json" />
+			</Component>
+		</DirectoryRef>
+
 		<DirectoryRef Id="INSTALLFOLDER">
 			<Component Id="ServiceExecutable" Bitness="always64">
 				<!--<File Id="DnsUpdater.exe" Source="$(var.PublishDir)\DnsUpdater.exe" KeyPath="true" />-->
@@ -37,6 +45,7 @@
 		<Feature Id="Service" Title="DnsUpdater Setup" Level="1">
 			<ComponentGroupRef Id="Bin"/>
 			<ComponentRef Id="ServiceExecutable" />
+			<ComponentRef Id="DefaultConfig"/>
 		</Feature>
 	</Package>
 </Wix>

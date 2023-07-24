@@ -2,6 +2,7 @@
   <PropertyGroup>
     <PublishDir>../dist</PublishDir>
     <DefineConstants>PublishDir=$(PublishDir)</DefineConstants>
+    <SuppressValidation>true</SuppressValidation>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DnsUpdater\DnsUpdater.csproj" />
