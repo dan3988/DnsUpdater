@@ -226,17 +226,17 @@ public class Worker : BackgroundService
 					{
 						if (address.Equals(ip))
 						{
-							_logger.LogInformation("Ignoring address change to {ip} as it matchese ignore address {ignore}", ip, ignore);
+							_logger.LogInformation("Ignoring ip {ip} as it matches ignore address {ignore}", ip, ignore);
 							return null;
 						}
 					}
 				}
 
-				_logger.LogInformation("Detected IP change to {ip}", ip);
+				_logger.LogInformation("VPN detected, IP not in ignore list: {ip}", ip);
 			}
 			else
 			{
-				_logger.LogInformation("No VPN detected, IP address: {IP}", ip);
+				_logger.LogInformation("No VPN detected: {ip}", ip);
 			}
 
 			return ip;
