@@ -43,26 +43,6 @@ public class Worker : BackgroundService
 		stream.Flush();
 	}
 
-	private static async Task<IPAddress> GetIpAddressAsync(HttpClient client, Uri provider, CancellationToken cancellationToken = default)
-	{
-		using var res = await client.GetAsync(provider, cancellationToken);
-
-		if (res.IsSuccessStatusCode)
-		{
-			string data;
-
-			using (var content = res.Content.ReadAsStream(cancellationToken))
-			using (var reader = new StreamReader(content))
-				data = await reader.ReadLineAsync(cancellationToken) ?? "";
-
-			return IPAddress.Parse(data);
-		}
-		else
-		{
-			throw new HttpRequestException("Request failed.", null, res.StatusCode);
-		}
-	}
-
 	private static (bool Online, bool Vpn) GetNetworkStatus()
 	{
 		var interfaces = NetworkInterface.GetAllNetworkInterfaces();
@@ -225,22 +205,55 @@ public class Worker : BackgroundService
 		}
 	}
 
-	private async Task<IPAddress?> CheckAddressAsync(HttpClient client, CancellationToken cancellationToken = default)
+	private async Task<IPAddress?> TryGetIpAddressAsync(HttpClient client, Uri provider, CancellationToken cancellationToken = default)
 	{
 		try
 		{
-			var (connected, vpn) = GetNetworkStatus();
-			if (!connected)
+			using var res = await client.GetAsync(provider, cancellationToken);
+
+			if (!res.IsSuccessStatusCode)
 			{
-				_logger.LogInformation("No connection detected.");
+				_logger.LogError("IP provider responded with non 200 status code: {code} {statusText}", (int)res.StatusCode, res.ReasonPhrase);
 				return null;
 			}
 
-			var ip = await GetIpAddressAsync(client, _config.IpProvider, cancellationToken);
-			if (vpn)
+			var body = await res.Content.ReadAsStringAsync(cancellationToken);
+			if (!IPAddress.TryParse(body, out var ipAddress))
+			{
+				_logger.LogError("IP provider returned an invalid IP address string. Response:\n{body}", body);
+				return null;
+			}
+
+			return ipAddress;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to retrieve IP address.");
+			return null;
+		}
+	}
+
+	private async Task<IPAddress?> CheckAddressAsync(HttpClient client, CancellationToken cancellationToken = default)
+	{
+		var (connected, vpn) = GetNetworkStatus();
+		if (!connected)
+		{
+			_logger.LogInformation("No connection detected.");
+			return null;
+		}
+
+		var ip = await TryGetIpAddressAsync(client, _config.IpProvider, cancellationToken);
+		if (ip == null)
+			return null;
+
+		if (vpn)
+		{
+			var _ignore = default(string);
+			try
 			{
 				foreach (var ignore in _config.Ignore)
 				{
+					_ignore = ignore;
 					var dns = await Dns.GetHostEntryAsync(ignore, ip.AddressFamily, cancellationToken);
 
 					foreach (var address in dns.AddressList)
@@ -252,20 +265,20 @@ public class Worker : BackgroundService
 						}
 					}
 				}
-
-				_logger.LogInformation("VPN detected, IP not in ignore list: {ip}", ip);
 			}
-			else
+			catch (Exception ex)
 			{
-				_logger.LogInformation("No VPN detected: {ip}", ip);
+				_logger.LogError(ex, "Error checking ignore list item \"{item}\".", _ignore);
+				return null;
 			}
 
-			return ip;
+			_logger.LogInformation("VPN detected, IP not in ignore list: {ip}", ip);
 		}
-		catch (Exception ex)
+		else
 		{
-			_logger.LogError(ex, "Failed to retrieve IP address.");
-			return null;
+			_logger.LogInformation("No VPN detected: {ip}", ip);
 		}
+
+		return ip;
 	}
 }
