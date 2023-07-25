@@ -22,6 +22,9 @@ public sealed class Config
 	public int ChangeDelay { get; init; } = 1000;
 
 	[JsonProperty]
+	public int HttpBodyLogTruncation { get; init; } = 4000;
+
+	[JsonProperty]
 	public List<string> Ignore { get; } = new();
 
 	[JsonProperty]

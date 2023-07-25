@@ -182,6 +182,12 @@
 					"description": "A path to a file that the service will log the date and IP to when a change is detected.",
 					"type": "string"
 				},
+				"HttpBodyLogTruncation": {
+					"description": "The maximum amount of chars to write when logging HTTP request or response bodies. Set to -1 for no limit.",
+					"default": 4000,
+					"type": "number",
+					"minimum": -1
+				},
 				"Actions": {
 					"description": "A list of HTTP requests to send when a change is detected.",
 					"type": "array",

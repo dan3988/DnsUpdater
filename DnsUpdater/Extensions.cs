@@ -12,11 +12,14 @@ internal static class Extensions
 		return i < 0 ? i : i + startIndex;
 	}
 
-	public static async Task CopyToAsync(TextReader reader, TextWriter writer, CancellationToken cancellationToken = default)
+	public static Task CopyToAsync(this TextReader reader, TextWriter writer, CancellationToken cancellationToken = default)
+		=> CopyToAsync(reader, writer, -1, cancellationToken);
+
+	public static async Task<bool> CopyToAsync(TextReader reader, TextWriter writer, int limit, CancellationToken cancellationToken = default)
 	{
 		var pool = ArrayPool<char>.Shared;
 		var buffer = pool.Rent(2048);
-		var remaining = -1;
+		var remaining = limit;
 
 		try
 		{
@@ -24,7 +27,18 @@ internal static class Extensions
 			{
 				var count = await reader.ReadAsync(buffer, cancellationToken);
 				if (count == 0)
-					return;
+					return false;
+
+				if (remaining >= 0)
+				{
+					if (remaining <= count)
+					{
+						await writer.WriteAsync(buffer.AsMemory(0, remaining), cancellationToken);
+						return true;
+					}
+
+					remaining -= count;
+				}
 
 				await writer.WriteAsync(buffer.AsMemory(0, count), cancellationToken);
 			}
@@ -35,19 +49,19 @@ internal static class Extensions
 		}
 	}
 
-	public static Task LogToAsync(this HttpRequestMessage message, TextWriter writer, CancellationToken cancellationToken)
+	public static Task LogToAsync(this HttpRequestMessage message, TextWriter writer, int bodyTruncation, CancellationToken cancellationToken)
 	{
 		writer.WriteLine("{0} {1}", message.Method, message.RequestUri);
-		return LogAsync(writer, "Request", message.Headers, message.Content, cancellationToken);
+		return LogAsync(writer, "Request", message.Headers, message.Content, bodyTruncation, cancellationToken);
 	}
 
-	public static Task LogToAsync(this HttpResponseMessage message, TextWriter writer, CancellationToken cancellationToken)
+	public static Task LogToAsync(this HttpResponseMessage message, TextWriter writer, int bodyTruncation, CancellationToken cancellationToken)
 	{
 		writer.WriteLine("{0:D} {1}", message.StatusCode, message.ReasonPhrase);
-		return LogAsync(writer, "Response", message.Headers, message.Content, cancellationToken);
+		return LogAsync(writer, "Response", message.Headers, message.Content, bodyTruncation, cancellationToken);
 	}
 
-	private static async Task LogAsync(TextWriter writer, string prefix, HttpHeaders headers, HttpContent? content, CancellationToken cancellationToken)
+	private static async Task LogAsync(TextWriter writer, string prefix, HttpHeaders headers, HttpContent? content, int bodyTruncation, CancellationToken cancellationToken)
 	{
 		writer.Write(prefix);
 		writer.WriteLine(" Headers:");
@@ -63,7 +77,8 @@ internal static class Extensions
 			using var stream = await content.ReadAsStreamAsync(cancellationToken);
 			using var reader = new StreamReader(stream);
 
-			await CopyToAsync(reader, writer, cancellationToken);
+			if (await CopyToAsync(reader, writer, bodyTruncation, cancellationToken))
+				writer.Write(" ...(truncated to {0} chars)", bodyTruncation);
 		}
 
 		writer.WriteLine();

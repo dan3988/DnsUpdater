@@ -43,10 +43,10 @@ public class Worker : BackgroundService
 		stream.Flush();
 	}
 
-	private static Task<string> LogFailingRequestAsync(HttpResponseMessage response, CancellationToken cancellationToken = default)
-		=> LogFailingRequestAsync(response.RequestMessage, response, cancellationToken);
+	private static Task<string> LogFailingRequestAsync(HttpResponseMessage response, int bodyTruncation, CancellationToken cancellationToken = default)
+		=> LogFailingRequestAsync(response.RequestMessage, response, bodyTruncation, cancellationToken);
 
-	private static async Task<string> LogFailingRequestAsync(HttpRequestMessage? request, HttpResponseMessage response, CancellationToken cancellationToken = default)
+	private static async Task<string> LogFailingRequestAsync(HttpRequestMessage? request, HttpResponseMessage response, int bodyTruncation, CancellationToken cancellationToken = default)
 	{
 		var dir = Path.GetFullPath("Failed Requests");
 		var file = Path.Join(dir, $"{DateTime.UtcNow:yyyMMdd-HHmmssfff}.log");
@@ -56,9 +56,9 @@ public class Worker : BackgroundService
 		using var writer = File.CreateText(file);
 
 		if (request != null)
-			await request.LogToAsync(writer, cancellationToken);
+			await request.LogToAsync(writer, bodyTruncation, cancellationToken);
 
-		await response.LogToAsync(writer, cancellationToken);
+		await response.LogToAsync(writer, bodyTruncation, cancellationToken);
 
 		return file;
 	}
@@ -146,7 +146,7 @@ public class Worker : BackgroundService
 			}
 			else
 			{
-				var file = await LogFailingRequestAsync(message, response, stoppingToken);
+				var file = await LogFailingRequestAsync(message, response, _config.HttpBodyLogTruncation, stoppingToken);
 				_logger.LogWarning("Request for action {index}. Response written to {file}", i, file);
 			}
 		}
@@ -242,7 +242,7 @@ public class Worker : BackgroundService
 
 			if (!res.IsSuccessStatusCode)
 			{
-				var file = await LogFailingRequestAsync(res, cancellationToken);
+				var file = await LogFailingRequestAsync(res, _config.HttpBodyLogTruncation, cancellationToken);
 				_logger.LogError("IP provider responded with non 200 status code {code}. Response written to {file}", (int)res.StatusCode, file);
 				return null;
 			}
@@ -250,7 +250,7 @@ public class Worker : BackgroundService
 			var body = await res.Content.ReadAsStringAsync(cancellationToken);
 			if (!IPAddress.TryParse(body.Trim(), out var ipAddress))
 			{
-				var file = await LogFailingRequestAsync(res, cancellationToken);
+				var file = await LogFailingRequestAsync(res, _config.HttpBodyLogTruncation, cancellationToken);
 				_logger.LogError("IP provider returned an invalid IP address string. Response written to {file}", file);
 				return null;
 			}
