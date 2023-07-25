@@ -34,7 +34,7 @@ var host = new HostBuilder()
 		Environment.SetEnvironmentVariable("BASEDIR", baseDir);
 		Environment.CurrentDirectory = baseDir;
 		var config = Path.GetFullPath("settings.json");
-		b.AddJsonFile(config, false);
+		b.AddJsonFile(config, ctx.HostingEnvironment.IsDevelopment());
 	})
 	.ConfigureLogging((ctx, logging) =>
 	{
