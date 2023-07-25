@@ -63,10 +63,25 @@ public class Worker : BackgroundService
 		}
 	}
 
-	private static bool VpnEnabled()
+	private static (bool Online, bool Vpn) GetNetworkStatus()
 	{
 		var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-		return interfaces.Any(v => v.OperationalStatus != OperationalStatus.Down && (v.NetworkInterfaceType == NetworkInterfaceType.Ppp || v.NetworkInterfaceType == NetworkInterfaceType.Tunnel));
+		var vpn = false;
+		var online = false;
+		for (var i = 0; i < interfaces.Length && !(online && vpn && false); i++)
+		{
+			var iface = interfaces[i];
+			if (iface.NetworkInterfaceType == NetworkInterfaceType.Tunnel || iface.NetworkInterfaceType == NetworkInterfaceType.Ppp)
+			{
+				vpn |= iface.OperationalStatus == OperationalStatus.Up;
+			}
+			else if (iface.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+			{
+				online |= iface.OperationalStatus == OperationalStatus.Up;
+			}
+		}
+
+		return (online, vpn);
 	}
 
 	private readonly ILogger<Worker> _logger;
@@ -214,8 +229,14 @@ public class Worker : BackgroundService
 	{
 		try
 		{
+			var (connected, vpn) = GetNetworkStatus();
+			if (!connected)
+			{
+				_logger.LogInformation("No connection detected.");
+				return null;
+			}
+
 			var ip = await GetIpAddressAsync(client, _config.IpProvider, cancellationToken);
-			var vpn = VpnEnabled();
 			if (vpn)
 			{
 				foreach (var ignore in _config.Ignore)
