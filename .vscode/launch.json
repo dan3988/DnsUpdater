@@ -15,7 +15,8 @@
 			"console": "internalConsole",
 			"stopAtEntry": false,
 			"env": {
-				"environment": "Development"
+				"environment": "Development",
+				"BASEDIR": "${workspaceFolder}/DnsUpdater/bin/Debug/net7.0"
 			}
 		},
 		{

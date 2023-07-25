@@ -12,25 +12,29 @@ var host = new HostBuilder()
 	{
 		b.AddEnvironmentVariables();
 		b.AddJsonFile("appsettings.json");
+#if DEBUG
+		b.AddJsonFile($"appsettings.Development.json");
+#endif
 	})
 	.ConfigureAppConfiguration((ctx, b) =>
 	{
-		b.AddEnvironmentVariables();
-
-		if (ctx.HostingEnvironment.IsDevelopment())
-		{
-			b.AddJsonFile($"appsettings.Development.json");
-		}
-
 		var baseDir = ctx.Configuration.GetValue<string>("BaseDir");
-		if (!string.IsNullOrEmpty(baseDir))
+		if (string.IsNullOrEmpty(baseDir))
+		{
+			baseDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+			baseDir = Path.Join(baseDir, ctx.HostingEnvironment.ApplicationName);
+
+			Directory.CreateDirectory(baseDir);
+		}
+		else
 		{
 			baseDir = Environment.ExpandEnvironmentVariables(baseDir);
-			Environment.SetEnvironmentVariable("BASEDIR", baseDir);
-			Environment.CurrentDirectory = baseDir;
-			var config = Path.GetFullPath("appsettings.json");
-			b.AddJsonFile(config, false);
 		}
+
+		Environment.SetEnvironmentVariable("BASEDIR", baseDir);
+		Environment.CurrentDirectory = baseDir;
+		var config = Path.GetFullPath("settings.json");
+		b.AddJsonFile(config, false);
 	})
 	.ConfigureLogging((ctx, logging) =>
 	{
