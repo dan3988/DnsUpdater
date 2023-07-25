@@ -11,7 +11,7 @@
 
 		<DirectoryRef Id="ConfigDir">
 			<Component Id="UserConfig" Guid="7F70E464-8851-4CBD-8683-A350E350F586" Permanent="yes">
-				<File Id="appsettings.Default.json" Name="appsettings.json" Source="..\DnsUpdater\appsettings.Default.json" />
+				<File Id="settings.Default.json" Name="settings.json" Source="..\DnsUpdater\settings.Default.json" />
 			</Component>
 		</DirectoryRef>
 
