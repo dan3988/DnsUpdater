@@ -43,6 +43,26 @@ public class Worker : BackgroundService
 		stream.Flush();
 	}
 
+	private static Task<string> LogFailingRequestAsync(HttpResponseMessage response, CancellationToken cancellationToken = default)
+		=> LogFailingRequestAsync(response.RequestMessage, response, cancellationToken);
+
+	private static async Task<string> LogFailingRequestAsync(HttpRequestMessage? request, HttpResponseMessage response, CancellationToken cancellationToken = default)
+	{
+		var dir = Path.GetFullPath("Failed Requests");
+		var file = Path.Join(dir, $"{DateTime.UtcNow:yyyMMdd-HHmmssfff}.log");
+
+		Directory.CreateDirectory(dir);
+
+		using var writer = File.CreateText(file);
+
+		if (request != null)
+			await request.LogToAsync(writer, cancellationToken);
+
+		await response.LogToAsync(writer, cancellationToken);
+
+		return file;
+	}
+
 	private static (bool Online, bool Vpn) GetNetworkStatus()
 	{
 		var interfaces = NetworkInterface.GetAllNetworkInterfaces();
@@ -112,14 +132,23 @@ public class Worker : BackgroundService
 
 		var resolver = new WorkerResolver(_configuration, values);
 
-		foreach (var action in _actions)
+		for (var i = 0; i < _actions.Length; i++)
 		{
+			var action = _actions[i];
+
 			using var message = action.CreateRequest(resolver);
 			using var response = await client.SendAsync(message, stoppingToken);
 
-			var body = response.Content == null ? null : await response.Content.ReadAsStringAsync(stoppingToken);
-			var level = response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Warning;
-			_logger.Log(level, "Response from {location}: {code} {text}\n{body}", message.RequestUri, (int)response.StatusCode, response.ReasonPhrase, body);
+			if (response.IsSuccessStatusCode)
+			{
+				var body = response.Content == null ? null : await response.Content.ReadAsStringAsync(stoppingToken);
+				_logger.LogInformation( "Response from {location}: {code} {text}\n{body}", message.RequestUri, (int)response.StatusCode, response.ReasonPhrase, body);
+			}
+			else
+			{
+				var file = await LogFailingRequestAsync(message, response, stoppingToken);
+				_logger.LogWarning("Request for action {index}. Response written to {file}", i, file);
+			}
 		}
 	}
 
@@ -213,14 +242,16 @@ public class Worker : BackgroundService
 
 			if (!res.IsSuccessStatusCode)
 			{
-				_logger.LogError("IP provider responded with non 200 status code: {code} {statusText}", (int)res.StatusCode, res.ReasonPhrase);
+				var file = await LogFailingRequestAsync(res, cancellationToken);
+				_logger.LogError("IP provider responded with non 200 status code {code}. Response written to {file}", (int)res.StatusCode, file);
 				return null;
 			}
 
 			var body = await res.Content.ReadAsStringAsync(cancellationToken);
-			if (!IPAddress.TryParse(body, out var ipAddress))
+			if (!IPAddress.TryParse(body.Trim(), out var ipAddress))
 			{
-				_logger.LogError("IP provider returned an invalid IP address string. Response:\n{body}", body);
+				var file = await LogFailingRequestAsync(res, cancellationToken);
+				_logger.LogError("IP provider returned an invalid IP address string. Response written to {file}", file);
 				return null;
 			}
 
