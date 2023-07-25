@@ -13,7 +13,10 @@
 			"args": [],
 			"cwd": "${workspaceFolder}",
 			"console": "internalConsole",
-			"stopAtEntry": false
+			"stopAtEntry": false,
+			"env": {
+				"environment": "Development"
+			}
 		},
 		{
 			"name": ".NET Core Attach",
