@@ -4,7 +4,7 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development",
+        "ENVIRONMENT": "Development",
         "BASEDIR": "bin/$(Configuration)/net7.0"
       }
     }
