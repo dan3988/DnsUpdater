@@ -13,8 +13,7 @@ public sealed class TemplatedString
 	{
 		var minLength = 0;
 		var last = 0;
-		var entries = new Entry[2];
-		var entryCount = 0;
+		var entries = new ArrayBuilder<Entry>();
 
 		while (true)
 		{
@@ -32,10 +31,7 @@ public sealed class TemplatedString
 				var begin = text[last..(i - 1)].ToString();
 				var key = text[++i..close].ToString();
 
-				if (entryCount == entries.Length)
-					Array.Resize(ref entries, entryCount << 1);
-
-				entries[entryCount++] = new Entry(begin, key, null);
+				entries.Add(new(begin, key, null));
 				minLength += begin.Length;
 				last = close + 1;
 			}
@@ -43,9 +39,8 @@ public sealed class TemplatedString
 
 		var end = text[last..].ToString();
 		minLength += end.Length;
-		Array.Resize(ref entries, entryCount);
 
-		return new(minLength, end, entries);
+		return new(minLength, end, entries.ToArray());
 	}
 
 	private readonly record struct Entry(string Text, string Key, string? Format);
