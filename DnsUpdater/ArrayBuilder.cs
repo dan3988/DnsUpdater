@@ -32,8 +32,11 @@ internal struct ArrayBuilder<T>
 
 	public T[] ToArray()
 	{
+		if (_count == 0)
+			return Array.Empty<T>();
+
 		Trim();
-		return _array ?? Array.Empty<T>();
+		return _array!;
 	}
 
 	public void Trim()
