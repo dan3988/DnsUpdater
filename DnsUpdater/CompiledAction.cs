@@ -4,7 +4,7 @@ public sealed record CompiledAction(TemplatedString Location, string Method, IRe
 {
 	public HttpRequestMessage CreateRequest(ITemplateResolver resolver, IFormatProvider? formatProvider = null)
 	{
-		var url = Location.ToString(resolver, formatProvider);
+		var url = Location.Resolve(resolver, formatProvider);
 		var uri = new Uri(url);
 
 		var method = new HttpMethod(Method);
@@ -12,14 +12,14 @@ public sealed record CompiledAction(TemplatedString Location, string Method, IRe
 
 		if (Body != null)
 		{
-			var body = Body.ToString(resolver, formatProvider);
+			var body = Body.Resolve(resolver, formatProvider);
 			message.Content = new StringContent(body);
 			message.Content.Headers.ContentType = null;
 		}
 
 		foreach (var (key, value) in Headers)
 		{
-			var headerValue = value.ToString(resolver, formatProvider);
+			var headerValue = value.Resolve(resolver, formatProvider);
 			if (!message.Headers.TryAddWithoutValidation(key, headerValue) && (message.Content == null || !message.Content.Headers.TryAddWithoutValidation(key, headerValue)))
 				throw new InvalidOperationException("Failed to set header: " + key);
 		}

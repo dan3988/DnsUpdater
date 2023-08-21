@@ -9,8 +9,16 @@ public interface ITemplateResolver
 
 public sealed class TemplatedString
 {
-	private readonly record struct Entry(string Text, int PlaceholderIndex);
+	/// <summary>
+	/// Non-placeholder text which is followed by an escaped or non-escaped placeholder
+	/// </summary>
+	/// <param name="Text">The text before the placeholder</param>
+	/// <param name="Escaped">If true, the text following is an escaped placeholder e.g. "\${KEY}"</param>
+	private readonly record struct Entry(string Text, bool Escaped);
 
+	/// <summary>
+	/// The key and format string for a placeholde
+	/// </summary>
 	private readonly record struct Placeholder(string Key, string? Format);
 
 	public static TemplatedString Parse(ReadOnlySpan<char> text)
@@ -31,7 +39,7 @@ public sealed class TemplatedString
 				var begin = text[last..(i - 1)].ToString();
 				last = i++;
 				minLength += begin.Length;
-				entries.Add(new(begin, -1));
+				entries.Add(new(begin, true));
 				continue;
 			}
 
@@ -45,7 +53,7 @@ public sealed class TemplatedString
 				var begin = text[last..(i - 1)].ToString();
 				var key = text[++i..close].ToString();
 
-				entries.Add(new(begin, placeholders.Count));
+				entries.Add(new(begin, false));
 				placeholders.Add(new(key, null));
 				minLength += begin.Length;
 				last = i = close + 1;
@@ -57,7 +65,13 @@ public sealed class TemplatedString
 		return new(minLength + end.Length, end, entries.ToArray(), placeholders.ToArray());
 	}
 
+	/// <summary>
+	/// The length of all non-placeholder text combined
+	/// </summary>
 	private readonly int _minLength;
+	/// <summary>
+	/// The part of the string after the last placeholder, or the full string if there are none
+	/// </summary>
 	private readonly string _end;
 	private readonly Entry[] _entries;
 	private readonly Placeholder[] _placeholders;
@@ -76,18 +90,19 @@ public sealed class TemplatedString
 			return _end;
 
 		var sb = new StringBuilder(_minLength);
+		var placeholderIndex = 0;
 
 		for (var i = 0; i < _entries.Length; i++)
 		{
-			var (text, placeholder) = _entries[i];
+			var (text, escaped) = _entries[i];
 			sb.Append(text);
-			if (placeholder < 0)
+			if (escaped)
 			{
 				sb.Append('\\');
 			}
 			else
 			{
-				var (key, format) = _placeholders[placeholder];
+				var (key, format) = _placeholders[placeholderIndex++];
 				sb.Append("${").Append(key);
 				if (format != null)
 					sb.Append(',').Append(format);
@@ -99,20 +114,21 @@ public sealed class TemplatedString
 		return sb.Append(_end).ToString();
 	}
 
-	public string ToString(ITemplateResolver resolver, IFormatProvider? provider = null)
+	public string Resolve(ITemplateResolver resolver, IFormatProvider? provider = null)
 	{
 		if (_entries.Length == 0)
 			return _end;
 
 		var sb = new StringBuilder(_minLength);
+		var placeholderIndex = 0;
 
 		for (var i = 0; i < _entries.Length; i++)
 		{
-			var (text, placeholder) = _entries[i];
+			var (text, escaped) = _entries[i];
 			sb.Append(text);
-			if (placeholder >= 0)
+			if (!escaped)
 			{
-				var (key, format) = _placeholders[placeholder];
+				var (key, format) = _placeholders[placeholderIndex++];
 				var value = resolver.Resolve(key);
 				if (!string.IsNullOrEmpty(format) && value is IFormattable fmt)
 					value = fmt.ToString(format, provider);
