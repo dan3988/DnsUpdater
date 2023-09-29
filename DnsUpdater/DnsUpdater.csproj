@@ -7,7 +7,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
     <FileVersion>1.0.0.0</FileVersion>
-    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationIcon>..\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

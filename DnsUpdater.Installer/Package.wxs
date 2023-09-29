@@ -4,6 +4,8 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 	<Package Name="$(Name)" Manufacturer="$(Manufacturer)" Version="1.0.0.0" UpgradeCode="19e67424-4140-4f67-bc30-a85f6fe1ead0">
 		<MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeError)" />
+		<Icon Id="icon.ico" SourceFile="..\icon.ico"/>
+		<Property Id="ARPPRODUCTICON" Value="icon.ico" />
 
 		<StandardDirectory Id="TARGETDIR">
 			<Directory Id="ROOTDIRECTORY" Name="$(Name)"/>
