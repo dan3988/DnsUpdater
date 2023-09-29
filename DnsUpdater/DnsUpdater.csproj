@@ -6,6 +6,8 @@
     <UserSecretsId>dotnet-DnsUpdater-0f03e11f-e68d-4479-831f-b06a2cf18625</UserSecretsId>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <FileVersion>1.0.0.0</FileVersion>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
